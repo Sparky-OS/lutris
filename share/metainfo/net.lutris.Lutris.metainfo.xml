@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2009 Lutris -->
+<component type="desktop">
+  <id>net.lutris.Lutris</id>
+  <project_license>GPL-3.0-or-later</project_license>
+  <metadata_license>CC0-1.0</metadata_license>
+  <translation type="gettext">lutris</translation>
+  <developer_name translatable="no">Lutris Team</developer_name>
+  <developer id="net.lutris">
+    <name translatable="no">Lutris Team</name>
+  </developer>
+  <update_contact>mathieucomandon@gmail.com</update_contact>
+  <name translatable="no">Lutris</name>
+  <summary>Video game preservation platform</summary>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main window</caption>
+      <image>https://lutris.net/static/images/lutris-window-2023.png</image>
+    </screenshot>
+  </screenshots>
+  <description><p>Lutris helps you install and play video games from all eras and from most gaming systems. By leveraging and combining existing emulators, engine re-implementations and compatibility layers, it gives you a central interface to launch all your games.</p></description>
+  <url type="homepage">https://lutris.net</url>
+  <url type="donation">https://lutris.net/donate</url>
+  <url type="help">https://forums.lutris.net</url>
+  <url type="faq">https://lutris.net/faq</url>
+  <url type="translate">https://github.com/lutris/lutris/tree/master/po</url>
+  <url type="bugtracker">https://github.com/lutris/lutris/issues</url>
+  <url type="vcs-browser">https://github.com/lutris/lutris</url>
+  <launchable type="desktop-id">net.lutris.Lutris.desktop</launchable>
+  <releases>
+    <release version="0.5.22" date="2026-02-24" urgency="low">
+      <description>
+        <ul>
+          <li>Fix type annotations requiring quoting for Python &lt; 3.14 compatibility</li>
+          <li>Add mypy typing annotations on util/strings.py</li>
+          <li>Update release targets in PPA CI</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.21" date="2026-02-24" urgency="low">
+      <description>
+        <ul>
+          <li>Add Sniper runtime support — runners can execute inside Valve's Sniper container (Steam Linux Runtime 3.0)</li>
+          <li>Add ShadPS4 runner</li>
+          <li>Add Xenia runner</li>
+          <li>Dolphin-emu runner updated to use AppImage</li>
+          <li>Add collapsible sidebar sections</li>
+          <li>Provide a sort for uncategorized games</li>
+          <li>Fallback icons for sidebar buttons when icon theme is missing them</li>
+          <li>Add Python version to System Information</li>
+          <li>Fix GPU UUID detection returning wrong GPU on multi-GPU systems</li>
+          <li>Prefer most descriptive GPU name from vulkaninfo — fixes Intel Arc GPUs reported as "Intel Graphics"</li>
+          <li>Add defensive check for vulkaninfo option lines with no "="</li>
+          <li>Fix ghost categories persisting after rename</li>
+          <li>Fix sync_media returning attempted count instead of successful</li>
+          <li>Fix VDF parser handling of escaped quotes</li>
+          <li>Fix Wine-Wayland warning — warns on Wayland only, not X11</li>
+          <li>Add migration to move Proton versions from runners/proton to runners/wine</li>
+          <li>Fix broken translations and add .po validation to CI</li>
+          <li>Add Portuguese (Portugal) language support</li>
+          <li>Update Spanish and French translations</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.20" date="2026-02-14" urgency="low">
+      <description>
+        <ul>
+          <li>Fix Ubisoft Connect login</li>
+          <li>Fix Battle.net source compatibility with newer protobuf versions</li>
+          <li>Fix GOG installers for scripts using non-Windows runners (engine reimplementations, etc.)</li>
+          <li>Fix compatibility with Python 3.14</li>
+          <li>Fix Proton integration bugs so Proton-fixes are applied</li>
+          <li>Do not offer VKD3D, D3D Extras or DXVK-NVAPI on Proton versions; Proton will handle these</li>
+          <li>The "Enable Esync" and "Enable Fsync" and "DXVK" settings are now passed on to Proton</li>
+          <li>DXVK's integrated D8VK will be enabled in Proton</li>
+          <li>Wine runner adds an option to select Wine's "Wayland driver"</li>
+          <li>Add little buttons to select cover-art, banner and icons via URL in game configuration</li>
+          <li>Cover-art or banners from sources will be used when Lutris media is not available</li>
+          <li>Emulator BIOS file location (used by libretro) may be set in Preferences</li>
+          <li>Fix for updated Flathub API</li>
+          <li>Change Itch.io over to the use of API keys instead of usernames and passwords</li>
+          <li>Update EA App source to their new API</li>
+          <li>Simplify Itch.io collections - if you have no collection named "Lutris", we will show all games</li>
+          <li>MAME Machine setting uses a searchable entry for its enormous list</li>
+          <li>Obtain the release year from GOG and Itch.io</li>
+          <li>Add "Azahar" runner</li>
+          <li>Add "ZOOM Platform" source</li>
+          <li>Add "Steam Family" source to support Steam Families</li>
+          <li>Updated versions of runners for TIC-80, EasyRPG, mGBA, Rosalie's Mupen GUI, Ruffle, 86Box</li>
+          <li>Ryujinx runner can now specify 'application ID' for your multi-game XCIs</li>
+          <li>Support for importing Commodore 64 ROMs</li>
+          <li>Support ICDs for Intel Xe GPUs</li>
+          <li>Add option for 'ptyxis' terminal</li>
+          <li>Redundant "Add Games" menu item removed; use the plus button in the corner</li>
+          <li>Option to hide a source's games from also appearing in the Games view</li>
+          <li>"Manual Script" for the context menu will now see the game's environment variables</li>
+          <li>Add "Create Steam Big Picture shortcut" to the context menu</li>
+          <li>Add a file association to run .lutris installer files via double-click</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.18" date="2024-12-02" urgency="low">
+      <description>
+        <ul>
+          <li>Lutris downloads the latest GE-Proton build for Wine if any Wine version is installed</li>
+          <li>Use dark theme by default</li>
+          <li>Display cover-art rather than banners by default</li>
+          <li>Add 'Uncategorized' view to sidebar</li>
+          <li>Preference options that do not work on Wayland will be hidden when on Wayland</li>
+          <li>Game searches can now use fancy tags like 'installed:yes' or 'source:gog', with explanatory tool-tip</li>
+          <li>A new filter button on the search box can build many of these fancy tags for you</li>
+          <li>Runner searches can use 'installed:yes' as well, but no other fancy searches or anything</li>
+          <li>Updated the Flathub and Amazon source to new APIs, restoring integration</li>
+          <li>Itch.io source integration will load a collection named 'Lutris' if present</li>
+          <li>GOG and Itch.io sources can now offer Linux and Windows installers for the same game</li>
+          <li>Added support for the 'foot' terminal</li>
+          <li>Support for DirectX 8 in DXVK v2.4</li>
+          <li>Support for Ayatana Application Indicators</li>
+          <li>Additional options for Ruffle runner</li>
+          <li>Updated download links for the Atari800 and MicroM8 runners</li>
+          <li>No longer re-download cached installation files even when some are missing</li>
+          <li>Lutris log is included in the 'System' tab of the Preferences window</li>
+          <li>Improved error reporting, with the Lutris log included in the error details</li>
+          <li>Add AppArmor profile for Ubuntu versions >= 23.10</li>
+          <li>Add Duckstation runner</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.17" date="2024-04-10" urgency="low">
+      <description>
+        <ul>
+          <li>Fix critical bug preventing completion of installs if the script specifies a wine version</li>
+          <li>Fix critical bug preventing Steam library sync</li>
+          <li>Fix critical bug preventing game or runner uninstall in Flatpak</li>
+          <li>Support for library sync to lutris.net, this allows to sync games, play</li>
+          <li>time and categories to multiple devices.</li>
+          <li>Remove "Lutris" service view; with library sync the "Games" view replaces it.</li>
+          <li>Torturous and sadistic options for multi-GPUs that were half broken and understood by no one have been replaced by a simple GPU selector.</li>
+          <li>EXPERIMENTAL support for umu, which allows running games with Proton and</li>
+          <li>Pressure Vessel. Using Proton in Lutris without umu is no longer possible.</li>
+          <li>Better and sensible sorting for games (sorting by playtime or last played no longer needs to be reversed)</li>
+          <li>Support the "Categories" command when you select multiple games</li>
+          <li>Notification bar when your Lutris is no longer supported</li>
+          <li>Improved error dialog.</li>
+          <li>Add Vita3k runner (thanks @ItsAllAboutTheCode)</li>
+          <li>Add Supermodel runner</li>
+          <li>WUA files are now supported in Cemu</li>
+          <li>"Show Hidden Games" now displays the hidden games in a separate view, and re-hides them as soon as you leave it.</li>
+          <li>Support transparent PNG files for custom banner and cover-art</li>
+          <li>Images are now downloaded for manually added games.</li>
+          <li>Deprecate 'exe', 'main_file' or 'iso' placed at the root of the script,</li>
+          <li>all lutris.net installers have been updated accordingly.</li>
+          <li>Deprecate libstrangle and xgamma support.</li>
+          <li>Deprecate DXVK state cache feature (it was never used and is no longer relevant to DXVK 2)</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.16" date="2024-01-15" urgency="low">
+      <description>
+        <ul>
+           <li>Fix bug that prevented installers to complete</li>
+           <li>Better handling of Steam configurations for the Steam account picker</li>
+           <li>Load game library in a background thread</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.15" date="2024-01-07" urgency="low">
+      <description>
+        <ul>
+           <li>Fix some  crashes happening when using Wayland and a high DPI gaming mouse</li>
+           <li>Fix crash when opening the system preferences tab for a game</li>
+           <li>Reduced the locales list to a predefined one (let us know if you need yours added)</li>
+           <li>Fix Lutris not expanding "~" in paths</li>
+           <li>Download runtime components from the main window,</li>
+           <li>the "updating runtime" dialog appearing before Lutris opens has been removed</li>
+           <li>Add the ability to open a location in your file browser from file picker widgets</li>
+           <li>Add the ability to select, remove, or stop multiple games in the Lutris window</li>
+           <li>Redesigned 'Uninstall Game' dialog now completely removes games by default</li>
+           <li>Fix the export / import feature</li>
+           <li>Show an animation when a game is launched</li>
+           <li>Add the ability to disable Wine auto-updates at the expense of losing support</li>
+           <li>Add playtime editing in the game preferences</li>
+           <li>Move game files, runners to the trash instead of deleting them they are uninstalled</li>
+           <li>Add "Updates" tab in Preferences control and check for updates and correct missing media</li>
+           <li>in the 'Games' view.</li>
+           <li>Add "Storage" tab in Preferences to control game and installer cache location</li>
+           <li>Expand "System" tab in Preferences with more system information but less brown.</li>
+           <li>Add "Run Task Manager" command for Wine games</li>
+           <li>Add two new, smaller banner sizes for itch.io games.</li>
+           <li>Ignore Wine virtual desktop setting when using Wine-GE/Proton to avoid crash</li>
+           <li>Ignore MangoHUD setting when launching Steam to avoid crash</li>
+           <li>Sync Steam playtimes with the Lutris library</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.14" date="2023-10-16" urgency="low">
+      <description>
+        <ul>
+          <li>Add Steam account switcher to handle multiple Steam accounts</li>
+          <li>on the same device.</li>
+          <li>Add user defined tags / categories</li>
+          <li>Group every API calls for runtime updates in a single one</li>
+          <li>Download appropriate DXVK and VKD3D versions based on</li>
+          <li>the available GPU PCI IDs</li>
+          <li>EA App integration. Your Origin games and saves can be manually imported</li>
+          <li>from your Origin prefix.</li>
+          <li>Add integration with ScummVM local library</li>
+          <li>Download Wine-GE updates when Lutris starts</li>
+          <li>Group GOG and Amazon download in a single progress bar</li>
+          <li>Fix blank login window on online services such as GOG or EGS</li>
+          <li>Add a sort name field</li>
+          <li>Yuzu and xemu now use an AppImage</li>
+          <li>Experimental support for Flatpak provided runners</li>
+          <li>Header-bar search for configuration options</li>
+          <li>Support for Gamescope 3.12</li>
+          <li>Missing games show an additional badge</li>
+          <li>Add missing dependency on python3-gi-cairo for Debian packages</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.13" date="2023-05-16"  />
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>

@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 3, as published
+# by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranties of
+# MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+# PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""Main entry point for Lutris"""
+
+import gettext
+import locale
+import multiprocessing
+import os
+import sys
+from os.path import dirname, normpath, realpath
+
+# Python 3.14 changes the default to 'forkserver' which is very different;
+# let's not put up with _that_!
+multiprocessing.set_start_method("fork")
+
+LAUNCH_PATH = dirname(realpath(__file__))
+
+# Prevent loading Python modules from home folder
+# They can interfere with Lutris and prevent it
+# from working.
+if os.environ.get("LUTRIS_ALLOW_LOCAL_PYTHON_PACKAGES") != "1":
+    sys.path = [path for path in sys.path if not path.startswith("/home") and not path.startswith("/var/home")]
+
+if os.path.isdir(os.path.join(LAUNCH_PATH, "../lutris")):
+    sys.dont_write_bytecode = True
+    SOURCE_PATH = normpath(os.path.join(LAUNCH_PATH, ".."))
+    sys.path.insert(0, SOURCE_PATH)
+else:
+    sys.path.insert(0, os.path.normpath(os.path.join(LAUNCH_PATH, "../lib/lutris")))
+
+try:
+    locale.setlocale(locale.LC_ALL, "")
+except locale.Error as ex:
+    sys.stderr.write("Unsupported locale setting: %s\n" % ex)
+
+try:
+    # optional_settings does not exist if you don't use the meson build system
+    from lutris import optional_settings  # type: ignore
+
+    try:
+        locale.bindtextdomain("lutris", optional_settings.LOCALE_DIR)
+        gettext.bindtextdomain("lutris", optional_settings.LOCALE_DIR)
+        locale.textdomain("lutris")
+        gettext.textdomain("lutris")
+    except Exception as ex:
+        sys.stderr.write(
+            "Couldn't bind gettext domain, translations won't work.\n"
+            "LOCALE_DIR: %s\nError: %s\n" % (optional_settings.LOCALE_DIR, ex)
+        )
+except ImportError:
+    pass
+
+if "WEBKIT_DISABLE_DMABUF_RENDERER" not in os.environ:
+    os.environ["WEBKIT_DISABLE_DMABUF_RENDERER"] = "1"
+
+try:
+    from lutris.gui.application import LutrisApplication
+except ImportError as ex:
+    sys.stderr.write("Error importing Lutris application module: %s\n" % ex)
+    sys.exit(1)
+
+app = LutrisApplication()
+sys.exit(app.run(sys.argv))

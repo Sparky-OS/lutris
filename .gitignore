@@ -1,0 +1,40 @@
+nbproject
+build
+.project
+.pydevproject
+.settings
+.ropeproject
+.idea
+tags
+*.pyc
+*.pyo
+*.ui~
+PYSMELLTAGS
+lutris.e4p
+.coverage
+pga.db
+tests/coverage/*
+/dist
+/lutris.egg-info
+/flake.nix
+/flake.lock
+
+# meson builddirs
+builddir
+
+# i18n files
+po/lutris.pot
+po/*.mo
+transl-builddir
+
+# virtual environment folders
+venv
+.venv
+env
+.env
+
+# VS Codium files
+.vscode
+
+# glade recovery files
+*.ui~

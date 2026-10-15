@@ -1,0 +1,80 @@
+[tool.mypy]
+python_version = "3.12"
+packages = [
+    "lutris",
+    "tests",
+]
+exclude = [
+    ".*_pb2.py",  # Any automatically generated protobuf files
+    "venv"
+]
+disable_error_code = [
+    "no-redef",  # Allow variable redefinition
+    "has-type",  # Ignore when variable types cannot be determined.
+    "dict-item",  # Dictionaries are always fully dynamic
+    "var-annotated",  # Never require type annotations
+    "assignment",  # Allow incompatible types in assignment (used heavily in lutris class structure).
+]
+allow_redefinition = true
+follow_imports = "silent"
+ignore_missing_imports = true
+
+[tool.mypy-baseline]
+# --baseline-path: the file where the baseline should be stored
+baseline_path = ".mypy_baseline"
+# --depth: cut path names longer than that many directories deep
+depth = 40
+# --allow-unsynced: do not fail for unsynced resolved errors
+allow_unsynced = true
+# --preserve-position: do not remove error position from the baseline
+preserve_position = false
+# --hide-stats: do not show stats and messages at the end
+hide_stats = false
+# --no-colors: do not use colors in stats
+no_colors = false
+# --ignore: regexes for error messages to ignore
+ignore = []
+
+[[tool.mypy.overrides]]
+module = [
+    "lutris.cache",
+    "lutris.exception_backstops",
+    "lutris.exceptions",
+    "lutris.scanners.default_installers",
+    "lutris.services.mame",
+    "lutris.settings",
+    "lutris.util",
+    "lutris.util.discord.base",
+    "lutris.util.http",
+    "lutris.util.log",
+    "lutris.util.flatpak",
+    "lutris.util.retroarch.core_config",
+    "lutris.util.settings",
+    "lutris.util.system",
+    "lutris.util.ubisoft.consts",
+    "lutris.util.wine.d3d_extras",
+    "lutris.util.wine.dgvoodoo2",
+    "setup",
+    "utils.bios_format",
+    "utils.issuelocker",
+    "utils.meson_post_install",
+]
+# Equivalent to strict = true for per-module config
+# Use strict = true when https://github.com/python/mypy/issues/11401 is fixed
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+extra_checks = true
+no_implicit_reexport = true
+strict_equality = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pyright]
+
+typeCheckingMode = "basic"
+reportMissingImports = false
