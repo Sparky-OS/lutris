@@ -803,6 +803,7 @@ class Game:
 
         self.timer.start()
         self.state = self.STATE_RUNNING
+        self.runner.game_started(self)
         GAME_STARTED.fire(self)
 
         # Game is running, let's update discord status
@@ -970,6 +971,8 @@ class Game:
         if self.state != self.STATE_STOPPED:
             logger.warning("Game still running (state: %s)", self.state)
             self.stop()
+
+        self.runner.game_quit(self)
 
         # Check for post game script
         postexit_command = self.runner.system_config.get("postexit_command")

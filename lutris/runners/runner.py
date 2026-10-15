@@ -399,6 +399,12 @@ class Runner:  # pylint: disable=too-many-public-methods
 
         return path
 
+    def game_started(self, game) -> None:
+        """Called once the game is running; override this method in runners that watch the game."""
+
+    def game_quit(self, game) -> None:
+        """Called when the game has quit; override this method in runners that clean up after it."""
+
     def prelaunch(self):
         """Run actions before running the game, override this method in runners; raise an
         exception if prelaunch fails, and it will be reported to the user, and
