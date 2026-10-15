@@ -66,11 +66,13 @@ class TestWiz3DManager(unittest.TestCase):
         manager.enable()
         self.assertNotEqual(tree(self.prefix), before)
         manager.disable()
-        # only DXVK's own d3d9.dll was replaced; the DXVK manager puts it back
+        # the real Direct3D 9 (the system's DXVK) has its name back, nothing of wiz3D is left; the DXVK
+        # manager relinks d3d9.dll to the game's DXVK version when that is another one
         after = tree(self.prefix)
-        del before["drive_c/windows/system32/d3d9.dll"]
-        del before["drive_c/windows/syswow64/d3d9.dll"]
+        before["drive_c/windows/system32/d3d9.dll"] = os.path.join(self.dxvk_dir, "wine64", "d3d9.dll.so")
+        before["drive_c/windows/syswow64/d3d9.dll"] = os.path.join(self.dxvk_dir, "wine32", "d3d9.dll.so")
         self.assertEqual(after, before)
+        self.assertFalse(any("wiz3d" in target for target in after.values()))
 
     def test_architectures_without_files_are_left_out(self):
         os.remove(os.path.join(self.dxvk_dir, "wine32", "d3d9.dll.so"))

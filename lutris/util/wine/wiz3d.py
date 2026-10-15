@@ -118,7 +118,17 @@ class Wiz3DManager(DLLManager):
 
     def disable(self):
         for system_dir, _arch, _dll in self._iter_dlls():
-            for name in (REAL_DLL, "d3d9.dll") + WRAPPER_FILES + DATA_FILES:
+            proxy, real = os.path.join(system_dir, "d3d9.dll"), os.path.join(system_dir, REAL_DLL)
+            if self.is_managed_dll(real):
+                # The real Direct3D 9 takes its name back, so the prefix never lacks a d3d9.dll; the DXVK
+                # manager relinks it to the version the game uses when that is another one.
+                if self.is_managed_dll(proxy) or not os.path.lexists(proxy):
+                    if os.path.lexists(proxy):
+                        os.remove(proxy)
+                    os.rename(real, proxy)
+                else:
+                    os.remove(real)
+            for name in WRAPPER_FILES + DATA_FILES:
                 path = os.path.join(system_dir, name)
                 if self.is_managed_dll(path):
                     os.remove(path)
