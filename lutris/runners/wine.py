@@ -39,7 +39,7 @@ from lutris.runners.commands.wine import (  # noqa: F401 pylint: disable=unused-
     winetricks,
 )
 from lutris.runners.runner import Runner
-from lutris.util import stereo, system
+from lutris.util import stereo, stereo_games, system
 from lutris.util.display import DISPLAY_MANAGER, get_default_dpi, is_display_x11
 from lutris.util.graphics import drivers, vkquery
 from lutris.util.linux import LINUX_SYSTEM
@@ -402,6 +402,21 @@ class wine(Runner):
                 "and the desktop draws the picture the display needs, which is chosen in the display settings, "
                 "not here. Needs DXVK and the stereo Wine. It uses the DXVK of the system whatever DXVK "
                 "version is chosen above, and puts the prefix back as DXVK alone has it when the game ends."
+            ),
+        },
+        {
+            "option": "stereo3d_native",
+            "section": _("Graphics"),
+            "label": _("This game outputs full side by side itself"),
+            "type": "bool",
+            "default": False,
+            "condition": stereo.is_available(),
+            "help": _(
+                "Tick this for a game that draws both eyes side by side at full size, the left eye first, "
+                "in its own 3D mode: the desktop is told, and draws the picture the display needs. "
+                "Not for a game that outputs half width, or the right eye first. "
+                "The box is filled in from the list of such games that the wiz3D project keeps. "
+                "Stereo 3D (wiz3D) is not used for this game."
             ),
         },
         {
@@ -1157,7 +1172,7 @@ class wine(Runner):
             self.configure_desktop_integration(prefix_manager)
             self.set_regedit_keys()
 
-            if self.runner_config.get("stereo3d"):
+            if self.runner_config.get("stereo3d") and not self.runner_config.get("stereo3d_native"):
                 self.check_stereo3d()
 
             for manager, enabled in self.get_dll_managers().items():
@@ -1194,6 +1209,8 @@ class wine(Runner):
 
         for manager_class, enabled_option, version_option in manager_classes:
             enabled = bool(self.runner_config.get(enabled_option))
+            if enabled_option == "stereo3d" and self.runner_config.get("stereo3d_native"):
+                enabled = False  # the game draws side by side itself
             version = self.runner_config.get(version_option)
             if enabled or not enabled_only:
                 manager = manager_class(self.prefix_path, arch=self.wine_arch, version=version)
@@ -1322,7 +1339,8 @@ class wine(Runner):
     def finish_env(self, env: Dict[str, str], game) -> None:
         super().finish_env(env, game)
 
-        if self.runner_config.get("stereo3d"):
+        self.prefill_stereo3d_native(game)
+        if self.runner_config.get("stereo3d") and not self.runner_config.get("stereo3d_native"):
             # wiz3D reports its window in this file, and keeps its logs out of the prefix and the game folder
             self.stereo_dir = tempfile.mkdtemp(prefix="lutris-stereo-", dir=os.environ.get("XDG_RUNTIME_DIR"))
             self.stereo_state = os.path.join(self.stereo_dir, "window-state")
@@ -1355,12 +1373,28 @@ class wine(Runner):
     stereo_watcher = None
     stereo_dir = None
 
+    def prefill_stereo3d_native(self, game) -> None:
+        """Fills in the box of a game on the wiz3D list of games that draw side by side themselves, once"""
+        if not stereo_games.PREFILL_NATIVE_STEREO or not stereo.is_available():
+            return
+        game_level = self.config.game_level.setdefault(self.name.lower(), {})
+        if "stereo3d_native" in game_level:
+            return
+        game_level["stereo3d_native"] = stereo_games.is_native_stereo_game(game.name)
+        self.config.runner_config["stereo3d_native"] = game_level["stereo3d_native"]
+        self.config.save()
+
     def game_started(self, game) -> None:
         """Declares the game's window to the desktop as it appears"""
-        if not self.runner_config.get("stereo3d"):
+        native = self.runner_config.get("stereo3d_native")
+        if not native and not self.runner_config.get("stereo3d"):
             return
         try:
-            self.stereo_watcher = stereo.StereoWatcher(stereo.open_declaration(), state_path=self.stereo_state)
+            self.stereo_watcher = stereo.StereoWatcher(
+                stereo.open_declaration(),
+                state_path=None if native else self.stereo_state,
+                get_pids=game.get_game_pids if native else None,
+            )
         except MisconfigurationError as ex:
             game.signal_error(ex)
 
@@ -1371,18 +1405,18 @@ class wine(Runner):
             self.stereo_watcher.stop()
             self.stereo_watcher = None
             if not declared:
-                game.signal_error(
-                    MisconfigurationError(
-                        _(
-                            "Stereo 3D never started: wiz3D reported no window. "
-                            "Stereo 3D works with Direct3D 9 games, and DXVK has to be enabled."
-                        )
+                if self.runner_config.get("stereo3d_native"):
+                    message = _("The game's window could not be told to the desktop as stereo: the game has to show one window.")
+                else:
+                    message = _(
+                        "Stereo 3D never started: wiz3D reported no window. "
+                        "Stereo 3D works with Direct3D 9 games, and DXVK has to be enabled."
                     )
-                )
+                game.signal_error(MisconfigurationError(message))
         if self.stereo_dir:
             shutil.rmtree(self.stereo_dir, ignore_errors=True)
             self.stereo_dir = None
-        if self.runner_config.get("stereo3d") and self.prefix_path:
+        if self.runner_config.get("stereo3d") and not self.runner_config.get("stereo3d_native") and self.prefix_path:
             self.restore_prefix()
 
     def restore_prefix(self) -> None:
