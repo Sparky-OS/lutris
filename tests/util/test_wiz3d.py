@@ -84,6 +84,23 @@ class TestWiz3DManager(unittest.TestCase):
         self.assertFalse(Wiz3DManager(self.prefix).is_available())
 
 
+    def test_windows_path_follows_the_prefix_drives(self):
+        prefix = os.path.join(self.temp.name, "prefix")
+        os.makedirs(os.path.join(prefix, "dosdevices"))
+        os.makedirs(os.path.join(prefix, "drive_c", "users"))
+        os.symlink(os.path.join(prefix, "drive_c"), os.path.join(prefix, "dosdevices", "c:"))
+        logs = os.path.join(self.temp.name, "logs")
+        os.makedirs(logs)
+        # no drive holds the folder: Wine's own \\?\unix form
+        self.assertEqual(wiz3d.windows_path(prefix, logs), "\\\\?\\unix" + logs.replace("/", "\\"))
+        self.assertEqual(wiz3d.windows_path(prefix, os.path.join(prefix, "drive_c", "users")), "C:\\users")
+        os.symlink("/", os.path.join(prefix, "dosdevices", "z:"))
+        self.assertEqual(wiz3d.windows_path(prefix, logs), "Z:" + logs.replace("/", "\\"))
+        # the longest folder wins over Z:, and the lowest letter among equals
+        os.symlink(logs, os.path.join(prefix, "dosdevices", "d:"))
+        self.assertEqual(wiz3d.windows_path(prefix, os.path.join(logs, "wiz3D_proxy.log")), "D:\\wiz3D_proxy.log")
+
+
 class TestSystemDXVK(unittest.TestCase):
     def test_system_version_names_the_dll_so_files(self):
         manager = DXVKManager("/prefix", version=dxvk.SYSTEM_VERSION)

@@ -54,7 +54,7 @@ from lutris.util.wine.dxvk_nvapi import DXVKNVAPIManager
 from lutris.util.wine.extract_icon import PEFILE_AVAILABLE, IconExtractor
 from lutris.util.wine.prefix import DEFAULT_DLL_OVERRIDES, WinePrefixManager, find_prefix
 from lutris.util.wine.vkd3d import VKD3DManager
-from lutris.util.wine.wiz3d import Wiz3DManager
+from lutris.util.wine.wiz3d import Wiz3DManager, windows_path
 from lutris.util.wine.wine import (
     GE_PROTON_LATEST,
     WINE_DEFAULT_ARCH,
@@ -1359,8 +1359,8 @@ class wine(Runner):
             log_dir = os.path.join(settings.CACHE_DIR, "wiz3d")
             os.makedirs(log_dir, exist_ok=True)
             env["WIZ3D_ENABLE_3D"] = "1"
-            env["WIZ3D_STEREO_STATE"] = "Z:" + self.stereo_state.replace("/", "\\")
-            env["WIZ3D_LOG_DIR"] = "Z:" + log_dir.replace("/", "\\")
+            env["WIZ3D_STEREO_STATE"] = windows_path(self.prefix_path, self.stereo_state)
+            env["WIZ3D_LOG_DIR"] = windows_path(self.prefix_path, log_dir)
             env["WIZ3D_KWIN_DOUBLES"] = "1"  # the desktop doubles the one-eye window itself (declaration version 3)
 
         wine_exe = self.get_executable()

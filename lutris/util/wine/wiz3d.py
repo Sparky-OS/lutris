@@ -1,6 +1,8 @@
 """wiz3D, stereo 3D for Direct3D 9 games, placed in a Wine prefix"""
 
 import os
+import stat
+import string
 
 from lutris.util import system
 from lutris.util.wine.dll_manager import DLLManager
@@ -14,6 +16,33 @@ DXVK_FOLDERS = {"x64": "wine64", "x86": "wine32"}
 WRAPPER_FILES = ("S3DWrapperD3D9.dll", "S3DAPI.dll", "ZLOg.dll")
 DATA_FILES = ("wiz3D_Config.xml", "BaseProfile.xml", "OutputMethods")
 REAL_DLL = "d3d9_real.dll"
+
+
+def windows_path(prefix, path):
+    """The Unix path as Wine names it to Windows code: through the drive of the prefix that holds it (the
+    longest folder, the lowest letter, as Wine's own lookup does), or as \\\\?\\unix\\... when no drive does,
+    which Wine takes everywhere a path goes. Nothing here needs the Z: drive."""
+    path = os.path.abspath(path)
+    drives = {}
+    for letter in string.ascii_lowercase:
+        try:
+            info = os.stat(os.path.join(prefix, "dosdevices", letter + ":"))
+        except OSError:
+            continue
+        drives.setdefault((info.st_dev, info.st_ino), letter)
+    folder = path
+    while True:
+        try:
+            info = os.stat(folder)
+            if stat.S_ISDIR(info.st_mode) and (info.st_dev, info.st_ino) in drives:
+                rest = path[len(folder):].lstrip("/")
+                return drives[(info.st_dev, info.st_ino)].upper() + ":\\" + rest.replace("/", "\\")
+        except OSError:
+            pass
+        if folder == "/":
+            break
+        folder = os.path.dirname(folder)
+    return "\\\\?\\unix" + path.replace("/", "\\")
 
 
 class Wiz3DManager(DLLManager):
