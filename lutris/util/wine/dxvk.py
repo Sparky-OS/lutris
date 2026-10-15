@@ -1,7 +1,9 @@
 """DXVK helper module"""
 
 import os
+import shutil
 
+from lutris.util import system
 from lutris.util.graphics import vkquery
 from lutris.util.linux import LINUX_SYSTEM
 from lutris.util.wine.dll_manager import DLLManager
@@ -43,6 +45,21 @@ class DXVKManager(DLLManager):
         if self._version == SYSTEM_VERSION:
             return os.path.join(SYSTEM_DIR, SYSTEM_FOLDERS[arch], "%s.dll.so" % dll_name)
         return super().get_dll_path(arch, dll_name)
+
+    def enable_dll(self, system_dir, arch, dll_path):
+        """The system's files are named d3d9.dll.so; the link in the prefix is d3d9.dll, as for every version"""
+        if self._version != SYSTEM_VERSION:
+            return super().enable_dll(system_dir, arch, dll_path)
+        dll = os.path.basename(dll_path)[: -len(".so")]
+        if not system.path_exists(dll_path):
+            return self.disable_dll(system_dir, arch, dll[: -len(".dll")])
+        wine_dll_path = os.path.join(system_dir, dll)
+        if system.path_exists(wine_dll_path):
+            if not self.is_managed_dll(wine_dll_path) and not os.path.islink(wine_dll_path):
+                shutil.move(wine_dll_path, wine_dll_path + ".orig")
+            else:
+                os.remove(wine_dll_path)
+        system.create_symlink(dll_path, wine_dll_path)
 
     def can_enable(self):
         if os.environ.get("LUTRIS_NO_VKQUERY"):

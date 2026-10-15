@@ -109,6 +109,30 @@ class TestSystemDXVK(unittest.TestCase):
         self.assertEqual(manager.get_dll_path("x32", "dxgi"), "/usr/lib/dxvk/wine32/dxgi.dll.so")
         self.assertFalse(manager.is_recommended_version(dxvk.SYSTEM_VERSION))
 
+    def test_system_version_links_the_dll_names_the_prefix_knows(self):
+        with tempfile.TemporaryDirectory() as root:
+            system_dir = os.path.join(root, "dxvk")
+            for folder in ("wine64", "wine32"):
+                os.makedirs(os.path.join(system_dir, folder))
+                for dll in DXVKManager.managed_dlls:
+                    with open(os.path.join(system_dir, folder, "%s.dll.so" % dll), "wb") as out:
+                        out.write(b"MZ dxvk")
+            prefix = os.path.join(root, "prefix")
+            for folder in ("system32", "syswow64"):
+                os.makedirs(os.path.join(prefix, "drive_c", "windows", folder))
+                with open(os.path.join(prefix, "drive_c", "windows", folder, "d3d9.dll"), "wb") as out:
+                    out.write(b"MZ wine")
+            with mock.patch.object(dxvk, "SYSTEM_DIR", system_dir):
+                DXVKManager(prefix, arch="win64", version=dxvk.SYSTEM_VERSION).enable()
+            system32 = os.path.join(prefix, "drive_c", "windows", "system32")
+            self.assertEqual(os.readlink(os.path.join(system32, "d3d9.dll")), os.path.join(system_dir, "wine64", "d3d9.dll.so"))
+            self.assertTrue(os.path.isfile(os.path.join(system32, "d3d9.dll.orig")))
+            self.assertFalse(os.path.lexists(os.path.join(system32, "d3d9.dll.so")))
+            self.assertEqual(
+                os.readlink(os.path.join(prefix, "drive_c", "windows", "syswow64", "dxgi.dll")),
+                os.path.join(system_dir, "wine32", "dxgi.dll.so"),
+            )
+
 
 class TestStereoGames(unittest.TestCase):
     def test_parse_list(self):
