@@ -21,7 +21,7 @@ MAX_AGE = 7 * 24 * 3600
 TIMEOUT = 5
 
 # Whether a game's checkbox is filled in from the list when the game is first run
-PREFILL_NATIVE_STEREO = False
+PREFILL_NATIVE_STEREO = True
 
 
 def parse_list(readme: str) -> Set[str]:

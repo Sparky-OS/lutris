@@ -393,7 +393,7 @@ class wine(Runner):
             "section": _("Graphics"),
             "label": _("Stereo 3D"),
             "type": "bool",
-            "default": False,
+            "default": True,
             "visible": _is_stereo_wine_config,
             "conditional_on": "dxvk",
             "condition": Wiz3DManager().is_available(),
