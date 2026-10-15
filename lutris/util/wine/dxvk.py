@@ -8,6 +8,11 @@ from lutris.util.wine.dll_manager import DLLManager
 
 REQUIRED_VULKAN_API_VERSION = vkquery.vk_make_version(1, 3, 0)
 
+# The DXVK of the system, as Debian packages it: a folder for each architecture, the DLLs named *.dll.so
+SYSTEM_VERSION = "system"
+SYSTEM_DIR = "/usr/lib/dxvk"
+SYSTEM_FOLDERS = {"x64": "wine64", "x32": "wine32"}
+
 
 class DXVKManager(DLLManager):
     name = "dxvk"
@@ -15,12 +20,36 @@ class DXVKManager(DLLManager):
     managed_dlls = ("dxgi", "d3d11", "d3d10core", "d3d9", "d3d8")
     releases_url = "https://api.github.com/repos/lutris/dxvk/releases"
 
+    @property
+    def versions(self):
+        versions = super().versions
+        if os.path.isdir(os.path.join(SYSTEM_DIR, SYSTEM_FOLDERS["x64"])):
+            versions.append(SYSTEM_VERSION)
+        return versions
+
+    @property
+    def path(self):
+        if self._version == SYSTEM_VERSION:
+            return SYSTEM_DIR
+        return super().path
+
+    def is_recommended_version(self, version):
+        # The system's DXVK is there to be chosen, not to be the default
+        if version == SYSTEM_VERSION:
+            return False
+        return self._is_recommended_downloaded_version(version)
+
+    def get_dll_path(self, arch, dll_name):
+        if self._version == SYSTEM_VERSION:
+            return os.path.join(SYSTEM_DIR, SYSTEM_FOLDERS[arch], "%s.dll.so" % dll_name)
+        return super().get_dll_path(arch, dll_name)
+
     def can_enable(self):
         if os.environ.get("LUTRIS_NO_VKQUERY"):
             return True
         return LINUX_SYSTEM.is_vulkan_supported()
 
-    def is_recommended_version(self, version):
+    def _is_recommended_downloaded_version(self, version):
         # DXVK 2.x and later require Vulkan 1.3, so if that is lacking
         # we default to 1.x.
         if os.environ.get("LUTRIS_NO_VKQUERY"):

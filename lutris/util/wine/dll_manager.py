@@ -159,7 +159,11 @@ class DLLManager:
         The DLL might not be available for all architectures so
         only check if one exists for the supported ones
         """
-        return any(system.path_exists(os.path.join(self.path, arch, dll_name + ".dll")) for arch in self.archs.values())
+        return any(system.path_exists(self.get_dll_path(arch, dll_name)) for arch in self.archs.values())
+
+    def get_dll_path(self, arch, dll_name):
+        """Path to the component's copy of a DLL, for one of the architectures"""
+        return os.path.join(self.path, arch, "%s.dll" % dll_name)
 
     def get_download_url(self):
         """Fetch the download URL from the JSON version file"""
@@ -299,8 +303,7 @@ class DLLManager:
                 )
                 return
         for system_dir, arch, dll in self._iter_dlls():
-            dll_path = os.path.join(self.path, arch, "%s.dll" % dll)
-            self.enable_dll(system_dir, arch, dll_path)
+            self.enable_dll(system_dir, arch, self.get_dll_path(arch, dll))
         for appdata_dir, file, filename in self._iter_appdata_files():
             source_path = os.path.join(self.path, filename)
             self.enable_user_file(appdata_dir, file, source_path)
