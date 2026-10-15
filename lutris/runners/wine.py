@@ -3,6 +3,9 @@
 # pylint: disable=too-many-lines
 import os
 import shlex
+import shutil
+import tempfile
+from functools import lru_cache
 from gettext import gettext as _
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
@@ -21,6 +24,7 @@ from lutris.exceptions import (
 )
 from lutris.game import Game
 from lutris.gui.dialogs import FileDialog
+from lutris.monitored_command import RUNNING_COMMANDS
 from lutris.runners.commands.wine import (  # noqa: F401 pylint: disable=unused-import
     create_prefix,
     delete_registry_key,
@@ -35,7 +39,7 @@ from lutris.runners.commands.wine import (  # noqa: F401 pylint: disable=unused-
     winetricks,
 )
 from lutris.runners.runner import Runner
-from lutris.util import system
+from lutris.util import stereo, system
 from lutris.util.display import DISPLAY_MANAGER, get_default_dpi, is_display_x11
 from lutris.util.graphics import drivers, vkquery
 from lutris.util.linux import LINUX_SYSTEM
@@ -50,6 +54,7 @@ from lutris.util.wine.dxvk_nvapi import DXVKNVAPIManager
 from lutris.util.wine.extract_icon import PEFILE_AVAILABLE, IconExtractor
 from lutris.util.wine.prefix import DEFAULT_DLL_OVERRIDES, WinePrefixManager, find_prefix
 from lutris.util.wine.vkd3d import VKD3DManager
+from lutris.util.wine.wiz3d import Wiz3DManager
 from lutris.util.wine.wine import (
     GE_PROTON_LATEST,
     WINE_DEFAULT_ARCH,
@@ -76,6 +81,17 @@ def _is_proton_config(config: LutrisConfig) -> bool:
 
 def _is_pre_proton(_option_key: str, config: LutrisConfig) -> bool:
     return not _is_proton_config(config)
+
+
+@lru_cache(maxsize=None)
+def _is_stereo_system_wine() -> bool:
+    """True if the system's Wine is the stereo build, the one with the patches wiz3D needs"""
+    return "stereo3d" in get_system_wine_version(WINE_PATHS["system"])
+
+
+def _is_stereo_wine_config(_option_key: str, config: LutrisConfig) -> bool:
+    """The Stereo 3D option is offered for the stereo system Wine only; other Wine builds and Proton are untested"""
+    return config.runner_config.get("version") == "system" and _is_stereo_system_wine()
 
 
 def _is_proton_hdr_available(_option_key: str, config: LutrisConfig) -> bool:
@@ -371,6 +387,22 @@ class wine(Runner):
             "choices": lambda: DXVKManager().version_choices,
             "default": lambda: DXVKManager().version,
             "warning": _get_dxvk_version_warning,
+        },
+        {
+            "option": "stereo3d",
+            "section": _("Graphics"),
+            "label": _("Stereo 3D"),
+            "type": "bool",
+            "default": False,
+            "visible": _is_stereo_wine_config,
+            "conditional_on": "dxvk",
+            "condition": Wiz3DManager().is_available(),
+            "help": _(
+                "Shows a Direct3D 9 game in stereo 3D: wiz3D renders the game's own scene from two cameras, "
+                "and the desktop draws the picture the display needs, which is chosen in the display settings, "
+                "not here. Needs DXVK and the stereo Wine. It uses the DXVK of the system whatever DXVK "
+                "version is chosen above, and puts the prefix back as DXVK alone has it when the game ends."
+            ),
         },
         {
             "option": "vkd3d",
@@ -1125,8 +1157,24 @@ class wine(Runner):
             self.configure_desktop_integration(prefix_manager)
             self.set_regedit_keys()
 
+            if self.runner_config.get("stereo3d"):
+                self.check_stereo3d()
+
             for manager, enabled in self.get_dll_managers().items():
                 manager.setup(enabled)
+
+    def check_stereo3d(self) -> None:
+        """Raises a MisconfigurationError that says why Stereo 3D cannot start, so a game is never started in mono"""
+        wine_exe = self.get_executable()
+        if proton.is_proton_path(wine_exe) or proton.is_umu_path(wine_exe):
+            raise MisconfigurationError(_("Stereo 3D is not available with Proton yet: choose the system Wine."))
+        if not _is_stereo_system_wine() or self.read_version_from_config() != "system":
+            raise MisconfigurationError(_("Stereo 3D needs the stereo build of Wine, which is the system's Wine."))
+        if not self.runner_config.get("dxvk"):
+            raise MisconfigurationError(_("Stereo 3D needs DXVK: turn on Enable DXVK for this game."))
+        if not Wiz3DManager(self.prefix_path, arch=self.wine_arch).is_available():
+            raise MisconfigurationError(_("Stereo 3D needs the wiz3d and dxvk-wine64 packages of the stereo edition."))
+        stereo.open_declaration().close()  # raises if the desktop cannot show stereo
 
     def get_dll_managers(self, enabled_only=False):
         """Returns the DLL managers in a dict; the keys are the managers themselves,
@@ -1136,6 +1184,7 @@ class wine(Runner):
             (DXVKManager, "dxvk", "dxvk_version"),
             (VKD3DManager, "vkd3d", "vkd3d_version"),
             (DXVKNVAPIManager, "dxvk_nvapi", "dxvk_nvapi_version"),
+            (Wiz3DManager, "stereo3d", None),
             (D3DExtrasManager, "d3d_extras", "d3d_extras_version"),
             (dgvoodoo2Manager, "dgvoodoo2", "dgvoodoo2_version"),
         ]
@@ -1273,6 +1322,17 @@ class wine(Runner):
     def finish_env(self, env: Dict[str, str], game) -> None:
         super().finish_env(env, game)
 
+        if self.runner_config.get("stereo3d"):
+            # wiz3D reports its window in this file, and keeps its logs out of the prefix and the game folder
+            self.stereo_dir = tempfile.mkdtemp(prefix="lutris-stereo-", dir=os.environ.get("XDG_RUNTIME_DIR"))
+            self.stereo_state = os.path.join(self.stereo_dir, "window-state")
+            log_dir = os.path.join(settings.CACHE_DIR, "wiz3d")
+            os.makedirs(log_dir, exist_ok=True)
+            env["WIZ3D_ENABLE_3D"] = "1"
+            env["WIZ3D_STEREO_STATE"] = "Z:" + self.stereo_state.replace("/", "\\")
+            env["WIZ3D_LOG_DIR"] = "Z:" + log_dir.replace("/", "\\")
+            env["WIZ3D_KWIN_DOUBLES"] = "1"  # the desktop doubles the one-eye window itself (declaration version 3)
+
         wine_exe = self.get_executable()
 
         if proton.is_proton_path(wine_exe) or proton.is_umu_path(wine_exe):
@@ -1291,6 +1351,47 @@ class wine(Runner):
             prefer_system_libs=self.system_config.get("prefer_system_libs", True),
             wine_path=wine_path,
         )
+
+    stereo_watcher = None
+    stereo_dir = None
+
+    def game_started(self, game) -> None:
+        """Declares the game's window to the desktop as it appears"""
+        if not self.runner_config.get("stereo3d"):
+            return
+        try:
+            self.stereo_watcher = stereo.StereoWatcher(stereo.open_declaration(), state_path=self.stereo_state)
+        except MisconfigurationError as ex:
+            game.signal_error(ex)
+
+    def game_quit(self, game) -> None:
+        """Takes the declaration back, tells the user if stereo never started, and puts the prefix back"""
+        if self.stereo_watcher:
+            declared = self.stereo_watcher.declared_any
+            self.stereo_watcher.stop()
+            self.stereo_watcher = None
+            if not declared:
+                game.signal_error(
+                    MisconfigurationError(
+                        _(
+                            "Stereo 3D never started: wiz3D reported no window. "
+                            "Stereo 3D works with Direct3D 9 games, and DXVK has to be enabled."
+                        )
+                    )
+                )
+        if self.stereo_dir:
+            shutil.rmtree(self.stereo_dir, ignore_errors=True)
+            self.stereo_dir = None
+        if self.runner_config.get("stereo3d") and self.prefix_path:
+            self.restore_prefix()
+
+    def restore_prefix(self) -> None:
+        """Leaves the prefix as DXVK alone has it, unless another game still runs in it"""
+        if self.prefix_path in (command.env.get("WINEPREFIX") for command in RUNNING_COMMANDS):
+            return
+        Wiz3DManager(self.prefix_path, arch=self.wine_arch).setup(False)
+        if self.runner_config.get("dxvk"):
+            DXVKManager(self.prefix_path, arch=self.wine_arch, version=self.runner_config.get("dxvk_version")).setup(True)
 
     def get_wine_executable_pids(self):
         """Return a list of pids of processes using the current wine exe."""
