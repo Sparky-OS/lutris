@@ -54,7 +54,7 @@ from lutris.util.wine.dxvk_nvapi import DXVKNVAPIManager
 from lutris.util.wine.extract_icon import PEFILE_AVAILABLE, IconExtractor
 from lutris.util.wine.prefix import DEFAULT_DLL_OVERRIDES, WinePrefixManager, find_prefix
 from lutris.util.wine.vkd3d import VKD3DManager
-from lutris.util.wine.wiz3d import Wiz3DManager, windows_path
+from lutris.util.wine.wiz3d import NATIVE_LAYOUTS, Wiz3DManager, dxvk_config, windows_path
 from lutris.util.wine.wine import (
     GE_PROTON_LATEST,
     WINE_DEFAULT_ARCH,
@@ -407,16 +407,32 @@ class wine(Runner):
         {
             "option": "stereo3d_native",
             "section": _("Graphics"),
-            "label": _("This game outputs full side by side itself"),
-            "type": "bool",
-            "default": False,
+            "label": _("This game draws both eyes itself"),
+            "type": "choice",
+            "choices": [(_("No"), "none")] + [(label, value) for value, label in NATIVE_LAYOUTS],
+            "default": "none",
             "condition": stereo.is_available(),
             "help": _(
-                "Tick this for a game that draws both eyes side by side at full size, the left eye first, "
-                "in its own 3D mode: the desktop is told, and draws the picture the display needs. "
-                "Not for a game that outputs half width, or the right eye first. "
-                "The box is filled in from the list of such games that the wiz3D project keeps. "
+                "For a game with a 3D mode of its own: choose the picture it draws, as its own 3D option "
+                "names it (side by side and top and bottom are the usual ones, for 3D televisions). "
+                "The system's DXVK unpacks it to full side by side and the desktop is told, so it draws "
+                "the picture the display needs. A game on the list of such games that the wiz3D project "
+                "keeps starts as side by side; change it if the game is set to another. "
                 "Stereo 3D (wiz3D) is not used for this game."
+            ),
+        },
+        {
+            "option": "stereo3d_native_right_first",
+            "section": _("Graphics"),
+            "label": _("The right eye comes first in that picture"),
+            "type": "bool",
+            "default": False,
+            "advanced": True,
+            "conditional_on": "stereo3d_native",
+            "condition": stereo.is_available(),
+            "help": _(
+                "Tick this if the game's picture has the right eye on the left half, the top half, the even "
+                "rows, columns or frames: the eyes come out the wrong way round otherwise."
             ),
         },
         {
@@ -1182,7 +1198,7 @@ class wine(Runner):
         """True if the game gets stereo 3D from wiz3D: the option is on and the game does not draw side by
         side itself. Where the option cannot apply (Proton, another Wine build, the packages missing) the game
         is left alone, unless the option was set on purpose for it, and then check_stereo3d() says why not."""
-        if not self.runner_config.get("stereo3d") or self.runner_config.get("stereo3d_native"):
+        if not self.runner_config.get("stereo3d") or self.native_stereo():
             return False
         on_purpose = any(
             "stereo3d" in level.get(self.name.lower(), {}) for level in (self.config.game_level, self.config.runner_level)
@@ -1352,6 +1368,9 @@ class wine(Runner):
         super().finish_env(env, game)
 
         self.prefill_stereo3d_native(game)
+        if self.native_stereo():
+            # the system's DXVK unpacks the game's own picture to full side by side when presenting
+            env["DXVK_CONFIG"] = dxvk_config(self.native_stereo(), bool(self.runner_config.get("stereo3d_native_right_first")), env.get("DXVK_CONFIG"))
         if self.uses_wiz3d():
             # wiz3D reports its window in this file, and keeps its logs out of the prefix and the game folder
             self.stereo_dir = tempfile.mkdtemp(prefix="lutris-stereo-", dir=os.environ.get("XDG_RUNTIME_DIR"))
@@ -1385,20 +1404,26 @@ class wine(Runner):
     stereo_watcher = None
     stereo_dir = None
 
+    def native_stereo(self) -> Optional[str]:
+        """The packing the game draws itself (one of NATIVE_LAYOUTS), or None"""
+        layout = self.runner_config.get("stereo3d_native")
+        return layout if layout and layout != "none" and layout in dict(NATIVE_LAYOUTS) else None
+
     def prefill_stereo3d_native(self, game) -> None:
-        """Fills in the box of a game on the wiz3D list of games that draw side by side themselves, once"""
+        """Fills in the packing of a game on the wiz3D list of games that draw both eyes themselves, once:
+        side by side, the packing every listed game offers; the user changes it for a game set to another"""
         if not stereo_games.PREFILL_NATIVE_STEREO or not stereo.is_available():
             return
         game_level = self.config.game_level.setdefault(self.name.lower(), {})
         if "stereo3d_native" in game_level:
             return
-        game_level["stereo3d_native"] = stereo_games.is_native_stereo_game(game.name)
+        game_level["stereo3d_native"] = "sideBySide" if stereo_games.is_native_stereo_game(game.name) else "none"
         self.config.runner_config["stereo3d_native"] = game_level["stereo3d_native"]
         self.config.save()
 
     def game_started(self, game) -> None:
         """Declares the game's window to the desktop as it appears"""
-        native = self.runner_config.get("stereo3d_native")
+        native = self.native_stereo()
         if not native and not self.uses_wiz3d():
             return
         try:
@@ -1417,7 +1442,7 @@ class wine(Runner):
             self.stereo_watcher.stop()
             self.stereo_watcher = None
             if not declared:
-                if self.runner_config.get("stereo3d_native"):
+                if self.native_stereo():
                     message = _("The game's window could not be told to the desktop as stereo: the game has to show one window.")
                 else:
                     message = _(

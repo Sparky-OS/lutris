@@ -3,6 +3,7 @@
 import os
 import stat
 import string
+from gettext import gettext as _
 
 from lutris.util import system
 from lutris.util.wine.dll_manager import DLLManager
@@ -16,6 +17,28 @@ DXVK_FOLDERS = {"x64": "wine64", "x86": "wine32"}
 WRAPPER_FILES = ("S3DWrapperD3D9.dll", "S3DAPI.dll", "ZLOg.dll")
 DATA_FILES = ("wiz3D_Config.xml", "BaseProfile.xml", "OutputMethods")
 REAL_DLL = "d3d9_real.dll"
+
+# The pictures a game may draw itself, as DXVK's dxvk.stereoInput names them (stereo-layer's Layout names): the
+# frame packings of H.264 Table D-8 and Matroska StereoMode, and the anaglyphs; DXVK unpacks each one to full side by
+# side, left eye first, when presenting.
+NATIVE_LAYOUTS = (
+    ("sideBySide", _("Side by side")),
+    ("sideBySideQuincunx", _("Side by side, quincunx")),
+    ("topAndBottom", _("Top and bottom")),
+    ("rows", _("Rows (line interleaved)")),
+    ("columns", _("Columns")),
+    ("checkerboard", _("Checkerboard")),
+    ("frameSequential", _("Frame sequential (alternate frames)")),
+    ("anaglyphRedCyan", _("Anaglyph, red and cyan")),
+    ("anaglyphGreenMagenta", _("Anaglyph, green and magenta")),
+    ("anaglyphAmberBlue", _("Anaglyph, amber and blue")),
+)
+
+
+def dxvk_config(layout, right_first, config=None):
+    """DXVK_CONFIG with the stereo input added to what is already there"""
+    ours = "dxvk.stereoInput = %s; dxvk.stereoInputRightFirst = %s" % (layout, "True" if right_first else "False")
+    return ours if not config else config.rstrip("; ") + "; " + ours
 
 
 def windows_path(prefix, path):

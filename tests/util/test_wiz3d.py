@@ -141,3 +141,22 @@ class TestStereoGames(unittest.TestCase):
         self.assertEqual(
             stereo_games.parse_list(README), {"crysis 2", "trine 1", "two worlds ii", "doom 3: bfg edition"}
         )
+
+
+class TestNativeStereo(unittest.TestCase):
+    def test_every_packing_of_the_standards_is_offered(self):
+        values = [value for value, _label in wiz3d.NATIVE_LAYOUTS]
+        # H.264 Table D-8 and Matroska StereoMode: side by side (and quincunx), top and bottom, rows, columns,
+        # checkerboard, alternate frames; the three anaglyphs
+        self.assertEqual(
+            values,
+            ["sideBySide", "sideBySideQuincunx", "topAndBottom", "rows", "columns", "checkerboard", "frameSequential",
+             "anaglyphRedCyan", "anaglyphGreenMagenta", "anaglyphAmberBlue"],
+        )
+
+    def test_dxvk_is_told_the_packing_and_the_eye_order(self):
+        self.assertEqual(wiz3d.dxvk_config("topAndBottom", True), "dxvk.stereoInput = topAndBottom; dxvk.stereoInputRightFirst = True")
+        self.assertEqual(
+            wiz3d.dxvk_config("sideBySide", False, "dxvk.hud = fps; "),
+            "dxvk.hud = fps; dxvk.stereoInput = sideBySide; dxvk.stereoInputRightFirst = False",
+        )

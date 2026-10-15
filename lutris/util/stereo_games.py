@@ -1,8 +1,9 @@
-"""The games that draw full side by side themselves, from the list the wiz3D project keeps online
+"""The games that draw both eyes themselves, from the list the wiz3D project keeps online
 
-The wiz3D README lists the games it leaves alone because they output side by side by themselves
-("Excluded (Native SBS/TAB)"). The list is fetched now and then and kept in the cache folder; without
-a network the last copy is used, and without a copy no game is on the list."""
+The wiz3D README lists the games it leaves alone because they output side by side or top and bottom
+by themselves ("Excluded (Native SBS/TAB)"), without saying which; every listed game offers side by
+side, so that is the first guess for the game's packing. The list is fetched now and then and kept in
+the cache folder; without a network the last copy is used, and without a copy no game is on the list."""
 
 import json
 import os
@@ -20,7 +21,7 @@ CACHE_PATH = os.path.join(settings.CACHE_DIR, "wiz3d-native-stereo.json")
 MAX_AGE = 7 * 24 * 3600
 TIMEOUT = 5
 
-# Whether a game's checkbox is filled in from the list when the game is first run
+# Whether a game's packing is filled in from the list when the game is first run
 PREFILL_NATIVE_STEREO = True
 
 
