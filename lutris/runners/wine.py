@@ -9,6 +9,8 @@ from functools import lru_cache
 from gettext import gettext as _
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+from gi.repository import Gio, GLib
+
 from lutris import runtime, settings
 from lutris.api import format_runner_version, normalize_version_architecture
 from lutris.config import LutrisConfig
@@ -55,6 +57,7 @@ from lutris.util.wine.extract_icon import PEFILE_AVAILABLE, IconExtractor
 from lutris.util.wine.prefix import DEFAULT_DLL_OVERRIDES, WinePrefixManager, find_prefix
 from lutris.util.wine.vkd3d import VKD3DManager
 from lutris.util.wine.wiz3d import NATIVE_LAYOUTS, Wiz3DManager, dxvk_config, windows_path
+from lutris.util.wine.wow64 import exe_kind, failed_in_wow64, fallback_prefix
 from lutris.util.wine.wine import (
     GE_PROTON_LATEST,
     WINE_DEFAULT_ARCH,
@@ -1169,6 +1172,8 @@ class wine(Runner):
         return get_default_dpi()
 
     def prelaunch(self):
+        if self.wine_arch == "win64" and exe_kind(self.game_exe) == "win16":
+            self.move_to_win32_prefix(failed_in_wow64("win16", None, 0, ""))
         prefix_path = self.prefix_path
         if prefix_path:
             if os.path.islink(prefix_path) and not os.path.exists(prefix_path):
@@ -1455,6 +1460,49 @@ class wine(Runner):
             self.stereo_dir = None
         if self.uses_wiz3d() and self.prefix_path:
             self.restore_prefix()
+        self.check_wow64_failure(game)
+
+    def check_wow64_failure(self, game) -> None:
+        """Moves a 32-bit game that did not run in its 64-bit prefix to a 32-bit one, on the evidence the run
+        left, tells the user why, and starts the game again there"""
+        if self.wine_arch != "win64" or not game.game_thread or self.game_config.get("arch") == "win64":
+            return
+        try:
+            status = int(game.game_thread.return_code)
+        except (TypeError, ValueError):
+            status = None
+        reason = failed_in_wow64(exe_kind(self.game_exe), status, game.timer.duration, game.game_thread.stdout or "")
+        if not reason:
+            return
+        prefix = self.move_to_win32_prefix(reason)
+        game.signal_error(
+            MisconfigurationError(
+                _(
+                    "The game did not run in its 64-bit Wine prefix: %(reason)s. "
+                    "From now on it runs in a 32-bit prefix, %(prefix)s, made at its next start; "
+                    "the game is started again now. The choice is in the game's Runner options (prefix and architecture)."
+                )
+                % {"reason": reason, "prefix": prefix}
+            )
+        )
+        application = Gio.Application.get_default()
+        delegate = getattr(application, "launch_ui_delegate", None)
+        if delegate:
+            GLib.idle_add(lambda: game.launch(delegate) and False)
+
+    def move_to_win32_prefix(self, reason: str) -> str:
+        """Sets the game's prefix to a 32-bit one beside its 64-bit prefix, remembered in the game's config"""
+        prefix = fallback_prefix(self.prefix_path)
+        logger.warning("%s runs in the 32-bit prefix %s: %s", self.game_exe, prefix, reason)
+        game_level = self.config.game_level.setdefault("game", {})
+        game_level["prefix"] = prefix
+        game_level["arch"] = "win32"
+        self.config.game_config["prefix"] = prefix
+        self.config.game_config["arch"] = "win32"
+        self.config.save()
+        self._prefix = prefix
+        self._wine_arch = "win32"
+        return prefix
 
     def restore_prefix(self) -> None:
         """Leaves the prefix as DXVK alone has it, unless another game still runs in it"""
